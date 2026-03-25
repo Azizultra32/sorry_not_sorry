@@ -77,8 +77,8 @@
       console.log('[SoraArchiver/main] DOM rescan found ' + domCount + ' video URL(s).');
     }
 
-    // Then try the API-based scan
-    var authInfo = extractAuthToken();
+    // Then try the API-based scan — get auth token (may need async /api/auth/session call)
+    var authInfo = await extractAuthTokenAsync();
 
     if (!authInfo) {
       // If DOM scraping found videos, that's still a success
@@ -89,11 +89,12 @@
       }
       console.warn(
         '[SoraArchiver/main] Auth token not found and no videos in DOM. ' +
-        'Browse your Sora library to discover videos.'
+        'Make sure you are logged in to sora.chatgpt.com.'
       );
       dispatchToIsolated({ type: 'SCAN_NO_AUTH' });
       return;
     }
+    console.log('[SoraArchiver/main] Auth token acquired, scanning...');
 
     try {
       var apiTotal = await fetchVideoLibrary(authInfo, function onBatch(batch) {
