@@ -235,6 +235,10 @@ function onScanClick() {
     lastStatus.isScanning = false;
     if (!resp.ok) {
       console.error('[SoraArchiver/popup] Scan error:', resp.error);
+      // If connection failed, show ready state so user can retry
+      if (resp.error && resp.error.includes('Receiving end does not exist')) {
+        showState('ready');
+      }
     }
     // Re-evaluate state now that scanning is done.
     refreshUI(true, lastStatus);
@@ -343,16 +347,33 @@ chrome.runtime.onMessage.addListener(function (message) {
 
 document.addEventListener('DOMContentLoaded', async function () {
   // 1. Check for an active Sora tab.
-  const tabs = await new Promise((resolve) => {
-    chrome.tabs.query(
-      { url: ['https://sora.com/*', 'https://sora.chatgpt.com/*'] },
-      resolve
-    );
-  });
+  let tabs = [];
+  try {
+    tabs = await new Promise((resolve, reject) => {
+      chrome.tabs.query(
+        { url: ['https://sora.com/*', 'https://sora.chatgpt.com/*'] },
+        function(result) {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(result || []);
+          }
+        }
+      );
+    });
+  } catch (e) {
+    console.warn('[SoraArchiver/popup] tabs.query failed:', e.message);
+  }
   const hasSoraTab = tabs && tabs.length > 0;
 
-  // 2. Fetch current background state.
-  const status = await sendMessage({ type: MESSAGE_TYPES.GET_STATUS });
+  // 2. Fetch current background state (service worker may need to wake up).
+  let status = { ok: false, videosDiscovered: 0, total: 0, completed: 0,
+                 failed: 0, downloading: 0, queued: 0, videos: {} };
+  try {
+    status = await sendMessage({ type: MESSAGE_TYPES.GET_STATUS });
+  } catch (e) {
+    console.warn('[SoraArchiver/popup] Could not reach background:', e.message);
+  }
 
   // 3. Show the right state.
   refreshUI(hasSoraTab, status);
