@@ -17,11 +17,11 @@ Chrome extension to download and archive all your Sora AI videos before the shut
 2. Open Chrome and go to `chrome://extensions/`
 3. Enable "Developer mode" (top right)
 4. Click "Load unpacked" and select this directory
-5. Navigate to [sora.com](https://sora.com) and click the extension icon
+5. Navigate to [sora.chatgpt.com](https://sora.chatgpt.com) and click the extension icon
 
 ## Usage
 
-1. Open sora.com and log in to your account
+1. Open sora.chatgpt.com and log in to your account
 2. Click the Sora Video Archiver extension icon
 3. Click "Scan Library" to discover all your videos
 4. Click "Download All" to start downloading

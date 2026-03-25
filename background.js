@@ -636,7 +636,7 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
             stopKeepAlive();
             sendResponse({
               ok:    false,
-              error: 'No active Sora tab found. Open sora.com first.',
+              error: 'No active Sora tab found. Open sora.chatgpt.com first.',
             });
             return;
           }
