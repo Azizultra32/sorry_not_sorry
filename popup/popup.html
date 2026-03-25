@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sora Video Archiver</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Header -->
+    <header>
+      <h1>Sora Video Archiver</h1>
+      <p class="subtitle">Archive your Sora videos before shutdown</p>
+    </header>
+
+    <!-- State: not on sora.com -->
+    <section id="state-not-on-sora" class="state">
+      <p class="info-text">Open <a href="https://sora.com" target="_blank">sora.com</a> to start archiving your videos.</p>
+    </section>
+
+    <!-- State: scanning library -->
+    <section id="state-scanning" class="state" hidden>
+      <div class="spinner"></div>
+      <p>Scanning your library...</p>
+      <p class="count">Found <span id="scan-count">0</span> videos so far</p>
+    </section>
+
+    <!-- State: scan complete, ready to download -->
+    <section id="state-ready" class="state" hidden>
+      <div class="stats">
+        <div class="stat">
+          <span id="total-count">0</span>
+          <label>Videos</label>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btn-download-all" class="btn primary">Download All</button>
+        <button id="btn-export-json" class="btn secondary">Export Metadata (JSON)</button>
+        <button id="btn-export-csv" class="btn secondary">Export Metadata (CSV)</button>
+      </div>
+    </section>
+
+    <!-- State: downloading -->
+    <section id="state-downloading" class="state" hidden>
+      <div class="progress-header">
+        <span id="dl-progress-text">0 of 0</span>
+        <span id="dl-percent">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div id="dl-progress-fill" class="progress-fill"></div>
+      </div>
+      <div class="dl-stats">
+        <span class="dl-stat completed">&#10003; <span id="dl-completed">0</span></span>
+        <span class="dl-stat failed">&#10007; <span id="dl-failed">0</span></span>
+        <span class="dl-stat queued">&#8943; <span id="dl-queued">0</span></span>
+      </div>
+      <div id="video-list" class="video-list">
+        <!-- Scrollable list of videos with status icons -->
+      </div>
+      <div class="actions">
+        <button id="btn-pause" class="btn secondary">Pause</button>
+        <button id="btn-retry" class="btn secondary" hidden>Retry Failed</button>
+      </div>
+    </section>
+
+    <!-- State: all downloads complete -->
+    <section id="state-complete" class="state" hidden>
+      <div class="complete-icon">&#10003;</div>
+      <h2>Archive Complete!</h2>
+      <p><span id="complete-count">0</span> videos downloaded</p>
+      <p id="complete-failed" hidden><span id="complete-failed-count">0</span> failed</p>
+      <div class="actions">
+        <button id="btn-export-json-final" class="btn primary">Export Metadata (JSON)</button>
+        <button id="btn-export-csv-final" class="btn secondary">Export Metadata (CSV)</button>
+        <button id="btn-retry-final" class="btn secondary" hidden>Retry Failed</button>
+      </div>
+    </section>
+
+    <!-- Settings panel (collapsible) -->
+    <details id="settings-panel">
+      <summary>Settings</summary>
+      <div class="settings-body">
+        <label>
+          Concurrent downloads:
+          <input type="number" id="setting-concurrency" min="1" max="10" value="3">
+        </label>
+        <label>
+          API Key (power user mode):
+          <input type="password" id="setting-api-key" placeholder="sk-...">
+        </label>
+        <button id="btn-scan" class="btn secondary">Scan Library</button>
+      </div>
+    </details>
+
+  </div>
+
+  <script src="../lib/constants.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
