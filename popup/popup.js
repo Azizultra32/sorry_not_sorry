@@ -40,6 +40,9 @@ let lastStatus = {
  */
 function determineState(hasSoraTab, status) {
   if (!hasSoraTab) return 'not-on-sora';
+  // If scanning but we already have discovered videos, show 'ready' so
+  // download buttons remain visible (with scan indicator updated via scan-count).
+  if (status.isScanning && (status.videosDiscovered || 0) > 0) return 'ready';
   if (status.isScanning) return 'scanning';
   if (status.downloading > 0 || status.queued > 0) return 'downloading';
   if ((status.completed > 0 || status.failed > 0) && status.queued === 0 && status.downloading === 0) return 'complete';
@@ -334,6 +337,25 @@ chrome.runtime.onMessage.addListener(function (message) {
     const count = message.videosDiscovered ?? 0;
     lastStatus.videosDiscovered = count;
     setText('scan-count', count);
+    setText('total-count', count);
+
+    // Append newly discovered video URLs to the log panel.
+    if (message.videos && Array.isArray(message.videos)) {
+      const logPanel = document.getElementById('log-panel');
+      if (logPanel) {
+        for (const video of message.videos) {
+          if (video.video_url) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = video.video_url;
+            entry.title = video.video_url;
+            logPanel.appendChild(entry);
+            // Auto-scroll to bottom
+            logPanel.scrollTop = logPanel.scrollHeight;
+          }
+        }
+      }
+    }
 
     // If we were scanning, check whether to switch to ready state.
     if (count > 0) {
@@ -394,16 +416,12 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   // 4. Wire up settings inputs.
   const concurrencyInput = document.getElementById('setting-concurrency');
-  const apiKeyInput      = document.getElementById('setting-api-key');
 
   // Restore saved settings.
   chrome.storage.local.get(['settings'], (stored) => {
     const saved = stored.settings || {};
     if (saved.MAX_CONCURRENT_DOWNLOADS && concurrencyInput) {
       concurrencyInput.value = saved.MAX_CONCURRENT_DOWNLOADS;
-    }
-    if (saved.API_KEY && apiKeyInput) {
-      apiKeyInput.value = saved.API_KEY;
     }
   });
 
@@ -417,17 +435,6 @@ document.addEventListener('DOMContentLoaded', async function () {
           chrome.storage.local.set({ settings: s });
         });
       }
-    });
-  }
-
-  if (apiKeyInput) {
-    apiKeyInput.addEventListener('change', () => {
-      const val = apiKeyInput.value.trim();
-      chrome.storage.local.get(['settings'], (stored) => {
-        const s = stored.settings || {};
-        s.API_KEY = val;
-        chrome.storage.local.set({ settings: s });
-      });
     });
   }
 

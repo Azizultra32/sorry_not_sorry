@@ -455,6 +455,55 @@ header .subtitle {
 }
 
 /* -------------------------------------------------------------------------
+   Log panel — discovered video URLs
+   ------------------------------------------------------------------------- */
+
+.log-panel {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #13132a;
+  border: 1px solid #2e2e4e;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: 'SFMono-Regular', 'Consolas', 'Menlo', monospace;
+  font-size: 11px;
+}
+
+.log-panel:empty::after {
+  content: 'No videos discovered yet.';
+  font-size: 12px;
+  color: #555577;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.log-entry {
+  padding: 2px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #7c9ef8;
+}
+
+.log-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.log-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-panel::-webkit-scrollbar-thumb {
+  background: #2e2e4e;
+  border-radius: 2px;
+}
+
+/* -------------------------------------------------------------------------
    Scrollbar for body
    ------------------------------------------------------------------------- */
 
