@@ -25,15 +25,16 @@
   }
 
   // -------------------------------------------------------------------------
-  // Fetch interception — passive discovery as the user browses
+  // Interception — passive discovery as the user browses
+  // Uses PerformanceObserver + fetch/XHR patching (with SES retry)
   // -------------------------------------------------------------------------
   interceptFetch(function onVideosPassivelyDiscovered(videos) {
     dispatchToIsolated({ type: 'VIDEOS_DISCOVERED', videos });
     console.log(
-      `[SoraArchiver/main] Passively discovered ${videos.length} video(s); forwarding.`
+      '[SoraArchiver/main] Passively discovered ' + videos.length + ' video(s); forwarding.'
     );
   });
-  console.log('[SoraArchiver/main] Fetch interception active.');
+  console.log('[SoraArchiver/main] Interception active (PerformanceObserver + fetch/XHR).');
 
   // -------------------------------------------------------------------------
   // Active library scan — triggered by a CustomEvent from the isolated world
