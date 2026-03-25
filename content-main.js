@@ -25,16 +25,44 @@
   }
 
   // -------------------------------------------------------------------------
-  // Interception — passive discovery as the user browses
-  // Uses PerformanceObserver + fetch/XHR patching (with SES retry)
+  // Passive discovery callback — shared by all strategies
   // -------------------------------------------------------------------------
-  interceptFetch(function onVideosPassivelyDiscovered(videos) {
+  function onVideosPassivelyDiscovered(videos) {
     dispatchToIsolated({ type: 'VIDEOS_DISCOVERED', videos });
     console.log(
-      '[SoraArchiver/main] Passively discovered ' + videos.length + ' video(s); forwarding.'
+      '[SoraArchiver/main] Discovered ' + videos.length + ' video(s); forwarding.'
     );
-  });
-  console.log('[SoraArchiver/main] Interception active (PerformanceObserver + fetch/XHR).');
+  }
+
+  // -------------------------------------------------------------------------
+  // Strategy A: Network interception (PerformanceObserver + fetch/XHR patch)
+  // -------------------------------------------------------------------------
+  interceptFetch(onVideosPassivelyDiscovered);
+  console.log('[SoraArchiver/main] Network interception active.');
+
+  // -------------------------------------------------------------------------
+  // Strategy B: DOM scraping — find <video> elements with videos.openai.com URLs
+  // This is the most reliable strategy and works regardless of SES lockdown.
+  // -------------------------------------------------------------------------
+  var rescanDOM = null;
+
+  function initDOMScraper() {
+    if (rescanDOM) return; // already initialized
+    if (!document.body) {
+      // Body not ready yet — retry
+      setTimeout(initDOMScraper, 200);
+      return;
+    }
+    rescanDOM = scrapeVideosFromDOM(onVideosPassivelyDiscovered);
+    console.log('[SoraArchiver/main] DOM scraper active — watching for video elements.');
+  }
+
+  // Start DOM scraping when body is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDOMScraper);
+  } else {
+    initDOMScraper();
+  }
 
   // -------------------------------------------------------------------------
   // Active library scan — triggered by a CustomEvent from the isolated world
@@ -42,26 +70,47 @@
   async function runLibraryScan() {
     console.log('[SoraArchiver/main] Starting active library scan…');
 
-    const authInfo = extractAuthToken();
+    // Always do a DOM rescan first — this is the most reliable method
+    var domCount = 0;
+    if (rescanDOM) {
+      domCount = rescanDOM();
+      console.log('[SoraArchiver/main] DOM rescan found ' + domCount + ' video URL(s).');
+    }
+
+    // Then try the API-based scan
+    var authInfo = extractAuthToken();
 
     if (!authInfo) {
+      // If DOM scraping found videos, that's still a success
+      if (domCount > 0) {
+        console.log('[SoraArchiver/main] No API auth, but DOM scraping found ' + domCount + ' video(s).');
+        dispatchToIsolated({ type: 'SCAN_COMPLETE', total: domCount });
+        return;
+      }
       console.warn(
-        '[SoraArchiver/main] Auth token not found. ' +
-        'Passive interception still active; browsing the library will discover videos.'
+        '[SoraArchiver/main] Auth token not found and no videos in DOM. ' +
+        'Browse your Sora library to discover videos.'
       );
       dispatchToIsolated({ type: 'SCAN_NO_AUTH' });
       return;
     }
 
     try {
-      const total = await fetchVideoLibrary(authInfo, function onBatch(batch) {
+      var apiTotal = await fetchVideoLibrary(authInfo, function onBatch(batch) {
         dispatchToIsolated({ type: 'VIDEOS_DISCOVERED', videos: batch });
       });
-      console.log(`[SoraArchiver/main] Active scan complete — ${total} video(s) found.`);
-      dispatchToIsolated({ type: 'SCAN_COMPLETE', total });
+      var total = Math.max(apiTotal, domCount);
+      console.log('[SoraArchiver/main] Active scan complete — ' + total + ' video(s) found (API: ' + apiTotal + ', DOM: ' + domCount + ').');
+      dispatchToIsolated({ type: 'SCAN_COMPLETE', total: total });
     } catch (err) {
-      console.error('[SoraArchiver/main] Active scan failed:', err);
-      dispatchToIsolated({ type: 'SCAN_ERROR', message: err.message });
+      // API scan failed, but DOM scraping may have found videos
+      if (domCount > 0) {
+        console.warn('[SoraArchiver/main] API scan failed but DOM found ' + domCount + ' video(s).');
+        dispatchToIsolated({ type: 'SCAN_COMPLETE', total: domCount });
+      } else {
+        console.error('[SoraArchiver/main] Active scan failed:', err);
+        dispatchToIsolated({ type: 'SCAN_ERROR', message: err.message });
+      }
     }
   }
 

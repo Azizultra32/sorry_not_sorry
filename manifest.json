@@ -12,7 +12,8 @@
   "host_permissions": [
     "https://sora.com/*",
     "https://sora.chatgpt.com/*",
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "https://videos.openai.com/*"
   ],
   "background": {
     "service_worker": "background.js"
