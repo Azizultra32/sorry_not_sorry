@@ -44,7 +44,8 @@ function determineState(hasSoraTab, status) {
   if (status.downloading > 0 || status.queued > 0) return 'downloading';
   if ((status.completed > 0 || status.failed > 0) && status.queued === 0 && status.downloading === 0) return 'complete';
   if (status.videosDiscovered > 0) return 'ready';
-  return 'not-on-sora'; // has tab but no videos yet
+  // On Sora tab but no videos found yet — show ready state with scan button
+  return 'ready';
 }
 
 // ---------------------------------------------------------------------------
