@@ -228,6 +228,9 @@ function sendMessage(msg) {
 // ---------------------------------------------------------------------------
 
 function onScanClick() {
+  // Hide any previous error
+  setHidden('error-banner', true);
+
   lastStatus.isScanning = true;
   showState('scanning');
   setText('scan-count', 0);
@@ -235,9 +238,12 @@ function onScanClick() {
     lastStatus.isScanning = false;
     if (!resp.ok) {
       console.error('[SoraArchiver/popup] Scan error:', resp.error);
-      // If connection failed, show ready state so user can retry
-      if (resp.error && resp.error.includes('Receiving end does not exist')) {
+      if (resp.error && (resp.error.includes('Receiving end does not exist') ||
+                         resp.error.includes('Could not establish connection'))) {
+        // Content script not injected — show error banner
+        setHidden('error-banner', false);
         showState('ready');
+        return;
       }
     }
     // Re-evaluate state now that scanning is done.

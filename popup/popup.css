@@ -86,6 +86,29 @@ header .subtitle {
 }
 
 /* -------------------------------------------------------------------------
+   Error banner
+   ------------------------------------------------------------------------- */
+
+.error-banner {
+  background: #3a1a1a;
+  border: 1px solid #f06c6c;
+  border-radius: 6px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.error-banner p {
+  margin: 0;
+  font-size: 12px;
+  color: #f09a9a;
+  line-height: 1.4;
+}
+
+.error-banner strong {
+  color: #ffffff;
+}
+
+/* -------------------------------------------------------------------------
    not-on-sora state
    ------------------------------------------------------------------------- */
 
