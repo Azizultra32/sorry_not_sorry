@@ -641,26 +641,64 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
             return;
           }
 
-          // Send to the first matching tab.  The scan runs asynchronously in
-          // content-main.js; isScanning stays true until a SCAN_STATUS message
-          // arrives from content.js when the scan completes or errors out.
-          chrome.tabs.sendMessage(
-            tabs[0].id,
-            { type: MESSAGE_TYPES.SCAN_LIBRARY },
-            function (response) {
-              if (chrome.runtime.lastError) {
-                isScanning = false;
-                stopKeepAlive();
-                sendResponse({
-                  ok:    false,
-                  error: chrome.runtime.lastError.message,
-                });
-              } else {
-                // scan_started — keep isScanning = true; SCAN_STATUS will clear it.
-                sendResponse(response || { ok: true });
+          var tabId = tabs[0].id;
+
+          // Try to send to the content script. If it fails (not injected),
+          // inject it first and retry.
+          function sendScanMessage() {
+            chrome.tabs.sendMessage(
+              tabId,
+              { type: MESSAGE_TYPES.SCAN_LIBRARY },
+              function (response) {
+                if (chrome.runtime.lastError) {
+                  var errMsg = chrome.runtime.lastError.message;
+                  // If content script not injected, try to inject it
+                  if (errMsg.includes('Receiving end does not exist') ||
+                      errMsg.includes('Could not establish connection')) {
+                    console.log('[SoraArchiver/bg] Content script not found, injecting...');
+                    injectContentScripts(tabId, function(success) {
+                      if (success) {
+                        // Retry after injection
+                        setTimeout(function() {
+                          chrome.tabs.sendMessage(
+                            tabId,
+                            { type: MESSAGE_TYPES.SCAN_LIBRARY },
+                            function (resp2) {
+                              if (chrome.runtime.lastError) {
+                                isScanning = false;
+                                stopKeepAlive();
+                                sendResponse({
+                                  ok: false,
+                                  error: 'Content script injection failed. Please reload the Sora tab.',
+                                });
+                              } else {
+                                sendResponse(resp2 || { ok: true });
+                              }
+                            }
+                          );
+                        }, 500);
+                      } else {
+                        isScanning = false;
+                        stopKeepAlive();
+                        sendResponse({
+                          ok: false,
+                          error: 'Could not inject content scripts. Please reload the Sora tab.',
+                        });
+                      }
+                    });
+                  } else {
+                    isScanning = false;
+                    stopKeepAlive();
+                    sendResponse({ ok: false, error: errMsg });
+                  }
+                } else {
+                  sendResponse(response || { ok: true });
+                }
               }
-            }
-          );
+            );
+          }
+
+          sendScanMessage();
         }
       );
       return true; // async response
@@ -680,6 +718,44 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
       return false;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Content script injection helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Programmatically inject content scripts into a tab.
+ * Used when the extension was installed/updated but the page wasn't reloaded.
+ * @param {number} tabId
+ * @param {function} callback - called with (success: boolean)
+ */
+function injectContentScripts(tabId, callback) {
+  // Inject MAIN world scripts (constants + scraper + content-main)
+  chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    files: ['lib/constants.js', 'lib/scraper.js', 'content-main.js'],
+    world: 'MAIN',
+  }, function() {
+    if (chrome.runtime.lastError) {
+      console.warn('[SoraArchiver/bg] MAIN world injection failed:', chrome.runtime.lastError.message);
+      callback(false);
+      return;
+    }
+    // Inject ISOLATED world scripts (constants + content)
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ['lib/constants.js', 'content.js'],
+    }, function() {
+      if (chrome.runtime.lastError) {
+        console.warn('[SoraArchiver/bg] ISOLATED world injection failed:', chrome.runtime.lastError.message);
+        callback(false);
+      } else {
+        console.log('[SoraArchiver/bg] Content scripts injected successfully.');
+        callback(true);
+      }
+    });
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Service worker lifecycle

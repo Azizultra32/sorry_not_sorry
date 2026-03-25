@@ -7,7 +7,8 @@
     "activeTab",
     "tabs",
     "storage",
-    "downloads"
+    "downloads",
+    "scripting"
   ],
   "host_permissions": [
     "https://sora.com/*",

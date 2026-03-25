@@ -377,6 +377,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                  failed: 0, downloading: 0, queued: 0, videos: {} };
   try {
     status = await sendMessage({ type: MESSAGE_TYPES.GET_STATUS });
+    if (!status.ok && status.error && status.error.includes('Receiving end')) {
+      // Background service worker is not running
+      console.warn('[SoraArchiver/popup] Background service worker not reachable');
+      setHidden('error-banner', false);
+      var banner = document.getElementById('error-banner');
+      if (banner) banner.querySelector('p').innerHTML =
+        'Extension not fully loaded. Please <strong>reload this page</strong> (Ctrl+Shift+R) and reopen the popup.';
+    }
   } catch (e) {
     console.warn('[SoraArchiver/popup] Could not reach background:', e.message);
   }
